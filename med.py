@@ -10,6 +10,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import make_pipeline
 from sklearn.cross_validation import cross_val_score
 from sklearn import metrics
+import numpy as np
 
 
 # 数据分析
@@ -98,12 +99,18 @@ def doModeling(x, y):
     y_pred = pipe.predict(toStrList(x_test))
     print("准确率:", metrics.accuracy_score(y_test, y_pred))
     print("混淆矩阵:", metrics.confusion_matrix(y_test, y_pred))
+    print("F1Score:", metrics.f1_score(y_test, y_pred, average='macro'))
     return pipe.predict
     
     
 # 进行建模
 def modeling(data):
     x = data.words
+    words = toStrList(x)
+    f = open("words.txt", "w")
+    for word in words:
+        f.write(word)
+    f.close()
 #    print(type(x.values), x.head(), x.shape)
 #    term = vect.fit_transform(x.values)
 #    term_matrix = pd.DataFrame(term, columns = vect.get_feature_names())
@@ -148,7 +155,20 @@ def makeResult(filename, predict):
     print(results.head())
     results.to_csv("result.csv", index = None)
     print("输出完毕")
-
+    
+    
+# 计算F1_Score值
+def f1_score(inputFile, outputFile):
+    input = pd.read_csv(inputFile)
+    output = pd.read_csv(outputFile)
+    f1_A = metrics.f1_score(input.category_A, output.category_A, average='macro')
+    f1_B = metrics.f1_score(input.category_B, output.category_B, average='macro')
+    f1_C = metrics.f1_score(input.category_C, output.category_C, average='macro')
+    f1_D = metrics.f1_score(input.category_D, output.category_D, average='macro')
+    f1_E = metrics.f1_score(input.category_E, output.category_E, average='macro')
+    f1 = np.mean([f1_A, f1_B, f1_C, f1_D, f1_E])
+    return f1
+    
 
 if __name__ == "__main__":
     # 加载数据
@@ -156,5 +176,7 @@ if __name__ == "__main__":
     data = data_process(data)
     analysis(data)
     predict = modeling(data)
-    makeResult("test.csv", predict)
+    makeResult("train.csv", predict)
+    f1 = f1_score("train.csv", "result.csv")
+    print("f1分值:", f1)
     
