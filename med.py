@@ -12,6 +12,13 @@ from sklearn.cross_validation import cross_val_score
 from sklearn import metrics
 import numpy as np
 
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import VotingClassifier
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+
 
 # 数据分析
 def analysis(data):
@@ -87,11 +94,11 @@ def vecWords(words):
     
     
 # 具体建模过程
-def doModeling(x, y):
+def doModeling(x, y, model):
     x_train, x_test, y_train, y_test = train_test_split(x, y, random_state = 1)
-    nb = MultinomialNB()
+    # nb = MultinomialNB()
     vect, term_matrix = vecWords(x_train)
-    pipe = make_pipeline(vect, nb)
+    pipe = make_pipeline(vect, model)
     # print(pipe.steps)
     score = cross_val_score(pipe, toStrList(x_train), y_train, cv = 5, scoring = 'accuracy').mean()
     print("模型评分:", score)
@@ -104,7 +111,7 @@ def doModeling(x, y):
     
     
 # 进行建模
-def modeling(data):
+def modeling(data, model):
     x = data.words
     words = toStrList(x)
     f = open("words.txt", "w")
@@ -128,17 +135,17 @@ def modeling(data):
 #    x_train, x_test, yD_train, yD_test = train_test_split(x, yD, random_state = 1)
 #    x_train, x_test, yE_train, yE_test = train_test_split(x, yE, random_state = 1)
 #    x_train, x_test, yF_train, yF_test = train_test_split(x, yF, random_state = 1)
-    predA = doModeling(x, yA)
-    predB = doModeling(x, yB)
-    predC = doModeling(x, yC)
-    predD = doModeling(x, yD)
-    predE = doModeling(x, yE)
-    predF = doModeling(x, yF)
+    predA = doModeling(x, yA, model)
+    predB = doModeling(x, yB, model)
+    predC = doModeling(x, yC, model)
+    predD = doModeling(x, yD, model)
+    predE = doModeling(x, yE, model)
+    predF = doModeling(x, yF, model)
     return (predA, predB, predC, predD, predE, predF)
 
 
 # 用训练好的模型进行预测，输出规定格式的结果
-def makeResult(filename, predict):
+def makeResult(filename, predict, outputfile):
     data = pd.read_csv(filename)
     data = data_process(data)
     # print(data.head())
@@ -153,7 +160,7 @@ def makeResult(filename, predict):
     results["category_E"] = predict[4](words)
     results["category_F"] = predict[5](words)
     print(results.head())
-    results.to_csv("result.csv", index = None)
+    results.to_csv(outputfile, index = None)
     print("输出完毕")
     
     
@@ -169,14 +176,54 @@ def f1_score(inputFile, outputFile):
     f1 = np.mean([f1_A, f1_B, f1_C, f1_D, f1_E])
     return f1
     
+    
+# 处理解剖学名词
+def dealJiepou():
+    with open("jiepou.txt", "r") as f:
+        s = f.readlines()
+    for line in s:
+        line = line.strip("\n")
+        print(line)
+    #print(s)
+    print(len(s))
+    news = "".join(s)
+    # print(news)
+    with open("jiepouwords.txt", "w") as f:
+        f.write(news)
+    return news
+    
+    
+# 模型融合-投票法
+def vote_model():
+    model1 = MultinomialNB()
+    model2 = DecisionTreeClassifier(random_state = 2020)
+    model2 = SVC(kernel = "rbf", random_state = 0)
+    model = VotingClassifier(estimators=[('lr', model1), ('svc', model2)], voting='hard')
+    return model
+    
 
 if __name__ == "__main__":
     # 加载数据
     data = pd.read_csv("train.csv")
     data = data_process(data)
     analysis(data)
-    predict = modeling(data)
-    makeResult("train.csv", predict)
-    f1 = f1_score("train.csv", "result.csv")
+    # model = MultinomialNB()
+    # model = DecisionTreeClassifier(random_state = 2020)
+    # model = classifier = SVC(kernel = "rbf", random_state = 2020)
+    # model = DecisionTreeClassifier(criterion = 'entropy', random_state = 2020)
+    model = KNeighborsClassifier(n_neighbors=1,p=2,metric="minkowski")
+    predict = modeling(data, model)
+    makeResult("nlp_test.csv", predict, "result.csv")
+    makeResult("test.csv", predict, "testResult.csv")
+    f1 = f1_score("test.csv", "testResult.csv")
     print("f1分值:", f1)
+    # jiepouWords = dealJiepou()
+    # print(jiepouWords)
+#    print("模型融合-投票法")
+#    votemodel = vote_model()
+#    predict = modeling(data, votemodel)
+#    makeResult("nlp_test.csv", predict, "result.csv")
+#    makeResult("test.csv", predict, "testResult.csv")
+#    f1 = f1_score("test.csv", "testResult.csv")
+#    print("f1分值:", f1)
     
