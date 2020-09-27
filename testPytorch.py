@@ -90,8 +90,8 @@ def AG():
             print(t, loss)
         loss.backward()
         with torch.no_grad():
-            w1 -= learning_rate * grad_w1
-            w2 -= learning_rate * grad_w2
+            w1 -= learning_rate * w1.grad
+            w2 -= learning_rate * w2.grad
             w1.grad.zero_()
             w2.grad.zero_()
         
